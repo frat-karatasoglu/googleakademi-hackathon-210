@@ -71,6 +71,83 @@ def company_dashboard(ctx: UserContext = Depends(require_company)):
     }
 
 
+@router.get("/monthly-reports")
+def company_monthly_reports(ctx: UserContext = Depends(require_company)):
+    # Simulated monthly reports
+    return [
+        {"id": "rep_1", "month": "Nisan 2026", "url": "#", "date": "2026-04-30"},
+        {"id": "rep_2", "month": "Mart 2026", "url": "#", "date": "2026-03-31"},
+        {"id": "rep_3", "month": "Şubat 2026", "url": "#", "date": "2026-02-28"},
+    ]
+
+
+@router.get("/monthly-reports/{report_id}")
+def company_monthly_report_detail(report_id: str, ctx: UserContext = Depends(require_company)):
+    db = get_db()
+    tid = ctx.tenant_id
+    
+    # Map report IDs to months
+    month_map = {
+        "rep_1": ("2026-04", "Nisan 2026"),
+        "rep_2": ("2026-03", "Mart 2026"),
+        "rep_3": ("2026-02", "Şubat 2026"),
+    }
+    
+    if report_id not in month_map:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    month_prefix, month_name = month_map[report_id]
+    
+    # Fetch orders for this month
+    all_orders = db.table("orders").select("*").eq("tenant_id", tid).execute().data
+    month_orders = [o for o in all_orders if o["order_date"].startswith(month_prefix)]
+    
+    # Calculate statistics
+    total_orders = len(month_orders)
+    total_revenue = sum(o.get("total_amount", 0) for o in month_orders)
+    
+    status_counts = {}
+    daily_sales = {}
+    for order in month_orders:
+        status = order.get("status", "unknown")
+        status_counts[status] = status_counts.get(status, 0) + 1
+        
+        date_key = order.get("order_date", "")
+        daily_sales[date_key] = daily_sales.get(date_key, 0) + float(order.get("total_amount", 0))
+    
+    # Get customers for order details
+    customers = {
+        c["id"]: c for c in db.table("customers").select("id,full_name").eq("tenant_id", tid).execute().data
+    }
+    
+    for order in month_orders:
+        order["customer_name"] = customers.get(order["customer_id"], {}).get("full_name", "Unknown")
+    
+    # Get top products
+    top_products = forecast_service.get_top_selling_products(tid)[:5]
+    
+    # Get critical inventory
+    products = db.table("products").select("*").eq("tenant_id", tid).execute().data
+    critical_products = [p for p in products if p["stock_quantity"] <= p["critical_threshold"]]
+    
+    # Sort daily sales by date
+    daily_sales_list = [{"date": d, "revenue": daily_sales[d]} for d in sorted(daily_sales.keys())]
+    
+    return {
+        "report_id": report_id,
+        "month": month_name,
+        "month_prefix": month_prefix,
+        "total_orders": total_orders,
+        "total_revenue": total_revenue,
+        "status_distribution": status_counts,
+        "daily_sales": daily_sales_list,
+        "orders_list": month_orders[:50],  # Limit to 50 for display
+        "top_products": top_products,
+        "critical_inventory": critical_products,
+        "generated_at": str(DateType.today()),
+    }
+
+
 @router.get("/operation-summary")
 async def company_operation_summary(ctx: UserContext = Depends(require_company)):
     db = get_db()

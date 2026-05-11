@@ -11,7 +11,7 @@ import ChatPanel from '@/components/ChatPanel'
 import {
   ShoppingCart, PackageCheck, Truck, AlertTriangle,
   BarChart3, Sparkles, Package, RefreshCw,
-  Plus, Pencil, Trash2, X, AlertCircle, CheckCircle,
+  Plus, Pencil, Trash2, X, AlertCircle, CheckCircle, FileText
 } from 'lucide-react'
 
 const ORDER_STATUSES = ['preparing', 'packed', 'shipped', 'delivered', 'delayed', 'cancelled']
@@ -32,6 +32,7 @@ export default function CompanyPage() {
   const [summary, setSummary] = useState<string>('')
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [forecast, setForecast] = useState<any[]>([])
+  const [monthlyReports, setMonthlyReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'orders' | 'inventory' | 'forecast'>('orders')
 
@@ -72,11 +73,13 @@ export default function CompanyPage() {
       api.getCompanyForecast(activeUser),
       api.getCompanyOrders(activeUser),
       api.getCompanyCustomers(activeUser),
-    ]).then(([d, f, o, c]: any) => {
+      api.getCompanyMonthlyReports(activeUser),
+    ]).then(([d, f, o, c, mr]: any) => {
       setDashboard(d)
       setForecast(f)
       setOrders(o)
       setCustomers(c)
+      setMonthlyReports(mr)
     }).finally(() => setLoading(false))
   }, [activeUser])
 
@@ -164,9 +167,9 @@ export default function CompanyPage() {
   if (!activeUser || activeUser.role !== 'company') return null
 
   const tabs = [
-    { key: 'orders',    label: T.tabOrders },
+    { key: 'orders', label: T.tabOrders },
     { key: 'inventory', label: T.tabInventory },
-    { key: 'forecast',  label: T.tabForecast },
+    { key: 'forecast', label: T.tabForecast },
   ] as const
 
   return (
@@ -175,9 +178,8 @@ export default function CompanyPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
-          toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-        }`}>
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          }`}>
           {toast.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
           {toast.msg}
         </div>
@@ -195,13 +197,13 @@ export default function CompanyPage() {
           <>
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-              <StatCard title={T.todayOrders}    value={dashboard?.today_order_count ?? 0}     icon={ShoppingCart}  color="blue" />
-              <StatCard title={T.preparing}      value={dashboard?.pending_order_count ?? 0}   icon={Package}       color="yellow" />
-              <StatCard title={T.packed}         value={dashboard?.packed_order_count ?? 0}    icon={PackageCheck}  color="purple" />
-              <StatCard title={T.shipped}        value={dashboard?.shipped_order_count ?? 0}   icon={Truck}         color="green" />
-              <StatCard title={T.delayedOrders}  value={dashboard?.delayed_order_count ?? 0}   icon={AlertTriangle} color="red" />
-              <StatCard title={T.criticalStock}  value={dashboard?.critical_stock_count ?? 0}  icon={AlertTriangle} color="red" />
-              <StatCard title={T.delayedShips}   value={dashboard?.delayed_shipment_count ?? 0} icon={Truck}        color="yellow" />
+              <StatCard title={T.todayOrders} value={dashboard?.today_order_count ?? 0} icon={ShoppingCart} color="blue" />
+              <StatCard title={T.preparing} value={dashboard?.pending_order_count ?? 0} icon={Package} color="yellow" />
+              <StatCard title={T.packed} value={dashboard?.packed_order_count ?? 0} icon={PackageCheck} color="purple" />
+              <StatCard title={T.shipped} value={dashboard?.shipped_order_count ?? 0} icon={Truck} color="green" />
+              <StatCard title={T.delayedOrders} value={dashboard?.delayed_order_count ?? 0} icon={AlertTriangle} color="red" />
+              <StatCard title={T.criticalStock} value={dashboard?.critical_stock_count ?? 0} icon={AlertTriangle} color="red" />
+              <StatCard title={T.delayedShips} value={dashboard?.delayed_shipment_count ?? 0} icon={Truck} color="yellow" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -226,8 +228,39 @@ export default function CompanyPage() {
                   {summary ? (
                     <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{summary}</p>
                   ) : (
-                    <p className="text-sm text-gray-400 dark:text-gray-500 italic">{T.aiSummaryPlaceholder}</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500 italic">{T.aiSummaryPlaceholder || "Yapay zeka özeti için oluştur butonuna tıklayın."}</p>
                   )}
+                </div>
+
+                {/* Monthly Reports */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText className="w-5 h-5 text-gray-500" />
+                    <h2 className="font-semibold text-gray-800 dark:text-white">Aylık Raporlar</h2>
+                  </div>
+                  <div className="space-y-3">
+                    {monthlyReports.length > 0 ? (
+                      monthlyReports.map(report => (
+                        <div
+                          key={report.id}
+                          onClick={() => router.push(`/company/reports/${report.id}`)}
+                          className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-700/50 transition cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800 dark:text-white">{report.month}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{report.date}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-400">Henüz aylık rapor bulunmuyor.</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Tabs */}
@@ -237,11 +270,10 @@ export default function CompanyPage() {
                       <button
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
-                        className={`flex-1 py-3 text-sm font-medium transition ${
-                          activeTab === tab.key
-                            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                        }`}
+                        className={`flex-1 py-3 text-sm font-medium transition ${activeTab === tab.key
+                          ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                          }`}
                       >
                         {tab.label}
                       </button>

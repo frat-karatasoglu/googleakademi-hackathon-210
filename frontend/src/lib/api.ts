@@ -76,7 +76,7 @@ export const api = {
   getAdminOrders: (u: DemoUser, tenantId?: string, status?: string) => {
     const params = new URLSearchParams()
     if (tenantId) params.set('tenant_id', tenantId)
-    if (status)   params.set('status', status)
+    if (status) params.set('status', status)
     const qs = params.toString()
     return get<any[]>(`/admin/orders${qs ? `?${qs}` : ''}`, u)
   },
@@ -89,6 +89,8 @@ export const api = {
 
   // Company
   getCompanyDashboard: (u: DemoUser) => get('/company/dashboard', u),
+  getCompanyMonthlyReports: (u: DemoUser) => get<any[]>('/company/monthly-reports', u),
+  getCompanyMonthlyReport: (u: DemoUser, reportId: string) => get<any>(`/company/monthly-reports/${reportId}`, u),
   getCompanyOperationSummary: (u: DemoUser) => get('/company/operation-summary', u),
   getCompanyOrders: (u: DemoUser) => get<any[]>('/company/orders', u),
   getCompanyCustomers: (u: DemoUser) => get<any[]>('/company/customers', u),
