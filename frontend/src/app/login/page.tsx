@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Moon, Sun, Languages } from 'lucide-react'
+import { Moon, Sun, Languages, KeyRound } from 'lucide-react'
 import { useApp } from '@/lib/context'
 import { dashboardPathFor } from '@/lib/auth'
 import Logo from '@/components/Logo'
@@ -59,6 +59,17 @@ export default function LoginPage() {
             </div>
 
             <LoginForm />
+
+            {/* Demo access link */}
+            <a
+              href="/demo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded-xl border border-dashed border-blue-300 dark:border-blue-500/40 text-blue-700 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition"
+            >
+              <KeyRound className="w-4 h-4" />
+              Demo Erişim Bilgileri
+            </a>
           </div>
         </div>
       </main>
